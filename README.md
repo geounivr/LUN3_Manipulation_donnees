@@ -1,6 +1,6 @@
 # GEO UNIV'R Tunisie 2024
 
-<img src = "logo.png" width = "250px"/>
+<img src = "img/logo.png" width = "250px"/>
 
 ## <ins>Liste des cours et supports</ins>
 
@@ -16,7 +16,7 @@ Introduction de l'école thématique
 
 Comment importer, explorer, manipuler, visualiser (simplement) et exporter des données géographiques avec R
 
-- <a href = "hhttps://geounivr.github.io/LUN3_Manipulation_donnees/" target = "_BLANK">LUN_3_manipulation de données</a>
+- <a href = "https://geounivr.github.io/LUN3_Manipulation_donnees/" target = "_BLANK">LUN_3_manipulation de données</a>
 
 
 ### [MAR2] Cartographie avec R
