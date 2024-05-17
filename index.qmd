@@ -43,8 +43,6 @@ Ce document montre les solutions techniques pour **importer**, **explorer**, **m
 - En utilisant des solutions des packages interfaçant des **API** (*Application Programming Interface*).
 - En mobilisant des packages interfaçant **OpenStreetMap (OSM)**. 
 
-Les exemples proposés sont tantôt adaptés aux contexte tunisien ou au contexte africain. 
-
 
 ### Packages utilisés
 
@@ -61,26 +59,37 @@ Les exemples proposés sont tantôt adaptés aux contexte tunisien ou au context
 
 Si vous n’avez pas ces packages, vous pouvez les installer en exécutant la ligne suivante dans la console.
 
-```{r}
+```{r install packages}
 #| eval: false
 
 install.packages(c('readxl',  'sf', 'terra', 'leaflet', 'geodata',  'wbstats', 
                    'rnaturalearth', 'osmextract', 'osrm', 'plotly'))
 ```
 
+
+### Données mobilisées
+
+Les exemples proposés sont tantôt adaptés au **contexte tunisien** ou au **continent africain**. L'archive (.zip) contenant les données mobilisées dans ce support est accessible à l'adresse suivante : **[https://bit.ly/3Wpdut4](https://bit.ly/3Wpdut4)**. Elle est organisée de la façon suivante : 
+
+<br><center>
+
+![](img/data.png)
+
+</center>
+
 <br>
 
-# From scratch
+# *"From scratch"*
 
-En partant de rien et avec quelques lignes de code on peut créer un jeu de données spatial pour en faire, par exemple, une carte interactive. 
+En partant de rien et avec quelques lignes de code on peut **créer un jeu de données spatial** pour en faire, par exemple, une carte interactive. 
 
 Trois vecteurs sont créés, puis transformés en `data.frame` et enfin convertis en objet spatial avec la fonction `st_as_sf()` du package `sf`. Cela permet de créer rapidement une carte interactive avec le package `leaflet`. 
 
-```{r}
+```{r from_scratch}
 # 3 vecteurs avec nom, longitude et latitude
-name <- c("Sentido Bellevue Park", "Université de Sfax")
-long <- c(10.579, 10.742)
-lat <- c(35.913, 34.736)
+name <- c("Sentido Bellevue Park", "Université de Sfax", "Université Paris Cité")
+long <- c(10.579, 10.742, 2.382)
+lat <- c(35.913, 34.736, 48.827)
 
 # Transformer en data.frame
 loc <- data.frame(name, long, lat)
@@ -105,38 +114,38 @@ leaflet(loc) |>
 
 # Tableaux de données
 
-## Fichiers .csv
+## Import .csv
 
 Import des données des délégations au format csv. On lui donne le nom de `del_df`.
 
-```{r}
-del_df <- read.csv("data/tun/don_del.csv", sep = ";", dec = ",")
+```{r import_csv}
+del_df <- read.csv("data/tun/data/don_del.csv", sep = ";", dec = ",")
 ```
 
 Avec R, il est très important de maîtriser la nature des objets importés ou transformés, et les convertir le cas échéant. La fonction `class()` nous permet de constater qu'il s'agit d'un `data.frame`. La fonction `str()` permet de détailler son contenu.  
 
-```{r}
+```{r R_objects}
 class(del_df)
 str(del_df)
 ```
 
 On visualise les premières lignes avec la fonction `head()`.
 
-```{r}
+```{r head_object}
 head(del_df, 5)
 ```
 
 
-## Fichiers Excel
+## Import Excel
 
 La package `readxl` permet l'import de fichiers Excel. La fonction `read_excel` a plusieurs arguments utiles pour spécifier en entrée le format des colonnes (texte, numérique), ne pas considérer les *n* premières lignes du fichier, etc. 
 
 Nous importons ici un fichier Excel dérivé du [*World Population Prospects*](https://population.un.org/wpp/Download/Standard/Population/) des Nations Unies, qui met à disposition toute sorte d’indicateurs démographiques (population, natalité, mortalité). On dispose ici des dénombrements de population par tranche d’âge quinquennale de 1950 à 2021 (feuille *estimates*).
 
-```{r}
+```{r import_excel}
 library(readxl)
 
-world <- read_excel("data/world/WPP2022_POP_F02_1_POPULATION_5-YEAR_AGE_GROUPS_BOTH_SEXES.xlsx", 
+world <- read_excel("data/world/data/unpp_POP_5y.xlsx", 
                  sheet = "Estimates",
                  skip = 16,
                  col_types = c(rep("text", 10), rep("numeric", 22))) 
@@ -146,7 +155,7 @@ world <- read_excel("data/world/WPP2022_POP_F02_1_POPULATION_5-YEAR_AGE_GROUPS_B
 
 Dans les faits ces fichiers nécessitent généralement d'être reformatés et réorganisés pour pouvoir être interprétés dans un logiciel quel qu'il soit... Commençons par comprendre la structure des données : noms de colonnes, années disponibles etc.
 
-```{r}
+```{r data_frame_classes}
 # Conversion en data.frame
 world <- data.frame(world)
 
@@ -159,7 +168,7 @@ unique(world$Year)
 
 On peut alors filtrer les dimensions du tableau, calculer des indicateurs, etc. qui pourront être utilisés pour des statistiques de base, des graphiques voire de futures représentations cartographiques.
 
-```{r}
+```{r data_frame_handling}
 # Somme de plusieurs colonnes
 world$POP_TOT <- rowSums(world[,c(12:32)]) # Population totale
 
@@ -174,48 +183,139 @@ world$OLD_RT <- (world$X65.69 + world$X70.74 + world$X75.79 + world$X80.84 +
                    world$X85.89 + world$X90.94 + world$X95.99) / world$POP_TOT * 100 
 
 # Sélection d'une ligne
-df <- world[world$Year == 2021,] # Année de référence
+world_2021 <- world[world$Year == 2021,] # Année de référence
 
 # Sélectionner plusieurs lignes
 afr <- c("910", "911", "912", "913", "914")
-df <- df[df$Parent.code %in% afr,] # Pays africains
+afr_2021 <- world_2021[world_2021$Parent.code %in% afr,] # Pays africains
 
 # Ordonner selon les valeurs d'une colonne
-df <- df[order(df$YOUNG_RT, decreasing = TRUE),]
+afr_2021 <- afr_2021[order(afr_2021$YOUNG_RT, decreasing = TRUE),]
 ```
 
 Il existe de nombreuses fonctions pour l'analyse statistique avec R. La plus basique étant probablement `summary()`. 
 
-```{r}
+```{r summary}
 # Résumé stat
-summary(df)
+summary(afr_2021)
 ```
 
 
-## Représentations graphiques
+::: {.callout-tip collapse="true"}
 
-Les possibilités offertes en terme de représentations graphiques sont nombreuses avec R ! Car c'est aussi un langage qui a été créé pour cela. 
+## L'intérêt de la programmation pour manipuler des données
 
-### De base 
+Les fournisseurs de données institutionnels distribuent parfois des tableaux de données peu adaptés à l'intégration dans un logiciel quel qu'il soit. La mise en forme des données dans un langage de programmation permet : 
 
-En une ligne de code on peut créer des représentations graphiques variées, adaptées à la nature statistique des variables à explorer. 
+- d'éviter d'avoir à manipuler ces fichiers manuellement, source d'erreurs.
+- d'avoir un façon générique et rapide d'importer un grand nombre de tableaux de données.
 
-```{r}
+Voici le fichier d'origineproduit par l'Institut National de la Statistique tunisien (INS) qui présente le nombre de chômeurs par sexe et niveau d'instruction par gouvernorat tunisien (INS) : 
+
+<center>![](img/data_chom_gouv.png)</center>
+
+Un court bloc de code permet de réorganiser le fichier comme désiré, et pourrait être utilement étendu aux autres fichiers distribués par l'INS. 
+
+```{r tunisian_data_handling}
+# Import
+input_gouv <- read_excel("data/tun/data/chomage.xls", # Chemin du fichier
+                         sheet = "Sheet1", # Nom de la feuille Excel
+                         skip = 3, # Retirer les trois premières lignes
+                         col_types = c(rep("text", 3), rep("numeric", 6))) # Format des colonnes 
+
+# Table de passage Recensement / codes internationaux
+gouv <- read.csv("data/tun/data/code_tun.csv")
+
+# Reformatage
+input_gouv <- data.frame(input_gouv)
+input_gouv[,1:2] <- NULL # Retirer les deux premières colonnes
+
+# Noms de colonnes
+cols <- c("CHOM_INS_NON_", "CHOM_INS_PRI_", "CHOM_INS_SEC_", "CHOM_INS_SUP_",
+          "CHOM_INS_UNK_", "CHOM_INS_TOT_") 
+colnames(input_gouv)[1] <- "id_TUN"
+
+# Chômeurs
+# Hommes
+tmp1 <- input_gouv[c(1:25),]
+names(tmp1)[2:length(tmp1)] <- paste0(cols, "M")
+gouv <- merge(gouv, tmp1, by = "id_TUN", all.x = TRUE)
+
+# Femmes
+tmp2 <- input_gouv[c(26:50),]
+names(tmp2)[2:length(tmp2)] <- paste0(cols, "F")
+gouv <- merge(gouv, tmp2, by = "id_TUN", all.x = TRUE)
+```
+
+Une fois mis en forme, on peut réaliser un graphique **sans avoir modifié le fichier initial provenant de l'INS**. 
+
+```{r tunisian_boxplot}
+#| fig-cap: "Nombre de chômeurs dans les gouvernorats tunisiens par niveau d'éducation"
+# 2 graphiques par ligne
+par(mfrow = c(1,2), mar = c(2,2,2,2))
+
+# Boxplot hommes
+boxplot(gouv$CHOM_INS_NON_M, # Chômeurs hommes par niveau d'instruction
+        gouv$CHOM_INS_PRI_M, 
+        gouv$CHOM_INS_SEC_M,
+        gouv$CHOM_INS_SUP_M, 
+        ylim = c(0, 12000), # Bornes min/max de l'axe des ordonnées
+        main = "Hommes", # Titre plot
+        names = c("Rien", "Primaire", "Secondaire", "Tertiaire"), # Labels (X)
+        ylab = "Nombre de chômeurs, 2014", # Label (Y)
+        col = "#adcaf7", # Couleur des box-plots
+        cex.axis = .6, # Taille des labels des axes (réduit de 70 %)
+        cex.title = .6) # Taille du label du titre (réduit de 70 %)
+
+# Boxplot femmes
+boxplot(gouv$CHOM_INS_NON_F, 
+        gouv$CHOM_INS_PRI_F, 
+        gouv$CHOM_INS_SEC_F,
+        gouv$CHOM_INS_SUP_F,
+        ylim = c(0, 12000),
+        main = "Femmes",
+        names = c("Rien", "Primaire", "Secondaire", "Tertiaire"), 
+        col = "#ed9fb0", 
+        cex.axis = .6, 
+        cex.title = .6)
+```
+
+:::
+
+## Export
+
+`write.csv()` exporte un `data.frame` selon un chemin spécifié. 
+
+```{r write_csv}
+#| eval: false
+write.csv(x = gouv, # Objet à exporter
+          file = "data/tun/data/gouv_chom.csv", # Chemin de fichier 
+          row.names = FALSE) # Pour retirer les numéros de ligne
+```
+
+
+## Graphiques de base
+
+Les possibilités offertes en terme de représentations graphiques sont nombreuses avec R ! En une ligne de code on peut créer des représentations graphiques variées. 
+
+On s'intéresse ici à la part des jeunes (0-14 ans, *YOUNG_RT*) et à la part des personnes âgées (65 ans et plus, *OLD_RT*) des pays africains dans la population totale en 2021.
+
+```{r plot_r_base} 
 par(mar = c(2,2,2,2), mfrow = c(2, 3))
 
-barplot(df$YOUNG_RT, main = "Diagramme en barre")
-boxplot(df$YOUNG_RT, main = "Boîtes à moustache")
-hist(df$YOUNG_RT, main = "Histogrammes")
-hist(df$YOUNG_RT, freq = FALSE, main = "Histogrammes et densité")
-lines(density(df$YOUNG_RT), col = "blue")
-stripchart(df$YOUNG_RT, method = "jitter", pch = 16,
+barplot(afr_2021$YOUNG_RT, main = "Diagramme en barre")
+boxplot(afr_2021$YOUNG_RT, main = "Boîtes à moustache")
+hist(afr_2021$YOUNG_RT, main = "Histogrammes")
+hist(afr_2021$YOUNG_RT, freq = FALSE, main = "Histogrammes et densité")
+lines(density(afr_2021$YOUNG_RT), col = "blue")
+stripchart(afr_2021$YOUNG_RT, method = "jitter", pch = 16,
            main = "Diagrammes de dispersion")
-plot(data = df, YOUNG_RT ~ OLD_RT, main = "Nuages de points")
+plot(data = afr_2021, YOUNG_RT ~ OLD_RT, main = "Nuages de points")
 ```
 
 Ces graphiques sont paramétrables avec une série d'arguments graphiques.   
 
-```{r}
+```{r plot_r_base_params}
 par(mar = c(4,4,0,4))
 
 # Line plot
@@ -256,28 +356,34 @@ legend(x = "topright",
 
 ## Graphiques interactifs
 
-Le package `plotly` [@R-plotly] permet d'intégrer une dimension interactive aux représentations graphiques. Pour utiliser les fonctions de ce package, il faut bien avoir en tête le format de données attendues (format long). 
+Le package `plotly` [@R-plotly] permet d'associer aux graphiques une dimension interactive. Pour utiliser les fonctions de ce package, il faut bien avoir en tête le format de données attendu (format long). 
 
-```{r}
+```{r plotly}
 library(plotly)
 
 # Importer jeu de données d'exemple de gapminder
-df <- read.csv("data/world/gapminder.csv")
+gap <- read.csv("data/world/data/gapminder.csv")
 
-head(df)
+head(gap)
+
+# Paramétrage des cercles proportionnels
+area_max <- 2000 # Diamètre maximal
+area_min <- area_max/(max(gap$pop)/min(gap$pop)) # Diamètre minimal
 
 # Créer un graphique de type "Multiple Trace Animations"
-fig <- df %>%
+fig <- gap %>%
   plot_ly(
-    x = ~gdpPercap, 
-    y = ~lifeExp, 
-    size = ~pop, 
-    color = ~continent, 
-    frame = ~year, 
-    text = ~country, 
-    hoverinfo = "text",
-    type = 'scatter',
-    mode = 'markers'
+    x = ~gdpPercap, # Variable X
+    y = ~lifeExp,   # Variable Y
+    size = ~pop,    # Taille des cercles 
+    color = ~continent,  # Couleur des cercles 
+    frame = ~year, # Animation temporelle 
+    sizes = c(area_min, area_max), # Gestion taille cercles
+    marker = list(opacity = 0.5, sizemode = 'area'), # Taille et opacité
+    text = ~country,  #  Nom du champ qui s'affichera interactivement
+    hoverinfo = "text", 
+    type = 'scatter', # Type de graphique
+    mode = 'markers' # Mode de représentation des figurés
   )
 
 # Paramétrer l'échelle, les labels, etc.
@@ -286,134 +392,36 @@ fig <- fig %>% layout(
     yaxis = list(title = "Espérance de vie")
   )
 
-
 fig
 ```
 
 
-:::{.callout-note title="Pour aller plus loin"}
+:::{.callout-note title="Pour aller plus loin" collapse="true"}
 
-Consulter [r-graph-gallery](https://r-graph-gallery.com/index.html) qui présente les possibilités graphiques les plus courantes, en langage de base R. L'exploration de la syntaxe `ggplot`et son package éponyme [ggplot2](https://ggplot2.tidyverse.org/index.html) peut être utile pour la recherche de représentations graphiques avancées. Cette syntaxe est un peu différente du langage de base R et repose sur les principes de la "grammaire des graphiques". Plusieurs manuels très bien construits permettent de rentrer dans l'univers de la visualisation de données avec `ggplot2`, comme [Modern Data Visualization with R](https://rkabacoff.github.io/datavis/) [@kabacoff]    
+[r-graph-gallery](https://r-graph-gallery.com/index.html) présente les possibilités graphiques les plus courantes, en langage de base R. L'exploration de la syntaxe `ggplot`et son package de référence [ggplot2](https://ggplot2.tidyverse.org/index.html) peut être utile pour la recherche de représentations graphiques avancées. Cette syntaxe est un peu différente du langage de base R et repose sur les principes de la "grammaire des graphiques". Plusieurs manuels très bien construits permettent de rentrer dans l'univers de la visualisation de données avec `ggplot2`, comme [Modern Data Visualization with R](https://rkabacoff.github.io/datavis/) [@kabacoff]
 
+![*Transition Plot* réalisé avec les packages `ggplot2` et `ggallivial` (R. Ysebaert, 2024)](img/transition_plot.png)
 :::
-
-::: {.callout-tip collapse="true"}
-## L'intérêt de la programmation pour manipuler des données
-
-Les fournisseurs de données institutionnels distribuent parfois des tableaux de données peu adaptés à l'intégration dans un logiciel quel qu'il soit. La mise en forme des données dans un langage de programmation permet : 
-
-- d'éviter d'avoir à manipuler ces fichiers manuellement, source d'erreurs.
-- d'avoir un façon générique et rapide d'importer un grand nombre de tableaux de données (et éviter de perdre de nombreuses heures de travail).
-
-Voici un exemple adapté aux données de chômage par gouvernorats tunisiens produit par l'Institut National de la Statistique tunisien (INS). Le fichier brut ressemble à ceci :
-
-![](img/data_chom_gouv.png)
-
-Un court bloc de code permet de réorganiser le fichier comme désiré, et pourrait être utilement étendu aux autres fichiers distribués par l'INS. 
-
-```{r}
-# Import
-df <- read_excel("data/tun/chomage.xls", # Chemin du fichier
-                 sheet = "Sheet1", # Nom de la feuille Excel
-                 skip = 3, # Retirer les trois premières lignes
-                 col_types = c(rep("text", 3), rep("numeric", 6))) # Format des colonnes 
-
-# Table de passage Recensement / codes internationaux
-gouv <- read.csv("data/tun/table_GADM_TUN.csv")
-
-# Reformatage
-df <- data.frame(df)
-df[,1:2] <- NULL # Retirer les deux premières colonnes
-
-# Noms de colonnes
-cols <- c("CHOM_INS_NON_", "CHOM_INS_PRI_", "CHOM_INS_SEC_", "CHOM_INS_SUP_",
-          "CHOM_INS_UNK_", "CHOM_INS_TOT_") 
-colnames(df)[1] <- "id_TUN"
-
-# Chômeurs
-# Hommes
-df1 <- df[c(1:25),]
-names(df1)[2:length(df1)] <- paste0(cols, "M")
-gouv <- merge(gouv, df1, by = "id_TUN", all.x = TRUE)
-
-# Femmes
-df2 <- df[c(26:50),]
-names(df2)[2:length(df2)] <- paste0(cols, "F")
-gouv <- merge(gouv, df2, by = "id_TUN", all.x = TRUE)
-
-# Total
-df3 <- df[c(51:75),]
-names(df3)[2:length(df3)] <- paste0(cols, "T")
-gouv <- merge(gouv, df3, by = "id_TUN", all.x = TRUE)
-
-head(gouv)
-```
-
-Une fois mis en forme, on peut réaliser un graphique **sans avoir modifié le fichier initial provenant de l'INS**. 
-
-```{r}
-#| fig-cap: "Nombre de chômeurs dans les gouvernorats tunisiens par niveau d'éducation"
-# 2 graphiques par ligne
-par(mfrow = c(1,2), mar = c(2,2,2,2))
-
-# Boxplot hommes
-boxplot(gouv$CHOM_INS_NON_M, # Chômeurs hommes par niveau d'instruction
-        gouv$CHOM_INS_PRI_M, 
-        gouv$CHOM_INS_SEC_M,
-        gouv$CHOM_INS_SUP_M, 
-        ylim = c(0, 12000), # Bornes min/max de l'axe des ordonnées
-        main = "Hommes", # Titre plot
-        names = c("Rien", "Primaire", "Secondaire", "Tertiaire"), # Labels (X)
-        ylab = "Nombre de chômeurs, 2014", # Label (Y)
-        col = "#adcaf7", # Couleur des box-plots
-        cex.axis = .6, # Taille des labels des axes (réduit de 70 %)
-        cex.title = .6) # Taille du label du titre (réduit de 70 %)
-
-# Boxplot femmes
-boxplot(gouv$CHOM_INS_NON_F, 
-        gouv$CHOM_INS_PRI_F, 
-        gouv$CHOM_INS_SEC_F,
-        gouv$CHOM_INS_SUP_F,
-        ylim = c(0, 12000),
-        main = "Femmes",
-        names = c("Rien", "Primaire", "Secondaire", "Tertiaire"), 
-        col = "#ed9fb0", 
-        cex.axis = .6, 
-        cex.title = .6)
-```
-
-:::
-
-## Export
-
-`write.csv()` exporte un `data.frame` selon un chemin spécifié. 
-
-```{r}
-#| eval: false
-
-write.csv(x = gouv, # Objet à exporter
-          dsn = "data/tun/gouv_chom.csv", # Chemin de fichier 
-          row.names = FALSE) # Pour retirer les numéros de ligne
-```
 
 <br>
 
 # Données vectorielles
 
-Le package [`sf`](https://r-spatial.github.io/sf/) permet d'importer et manipuler des couches géographiques vectorielles (points, lignes, polygones). 
+Le package **[`sf`](https://r-spatial.github.io/sf/)** permet d'importer et manipuler des couches géographiques vectorielles (points, lignes, polygones). 
 
 ## Import
 
-Le [geopackage](https://kost-ceco.ch/cms/kad_geopackage_fr.html#:~:text=1.2.1-,Description,.opengeospatial.org%2F) est un format de données ouvert  qui permet de stocker plusieurs couches géographiques dans un même fichier. La fonction `st_layers()` permet d’avoir un aperçu des couches présentes dans un fichier geopackage.  
+Le [geopackage](https://kost-ceco.ch/cms/kad_geopackage_fr.html#:~:text=1.2.1-,Description,.opengeospatial.org%2F) est un format de données ouvert  qui permet de stocker plusieurs couches géographiques dans un même fichier. La fonction `st_layers()` permet d’avoir un aperçu des couches présentes dans un geopackage.  
 
-```{r}
+```{r st_layers}
 library(sf)
 
 st_layers("data/tun/geom/tun_admin.gpkg")
 ```
 
-Importer des couches géographiques avec `st_read()`. Il s'agit ici des couches géographiques créées il y a quelques années par l'UAR RIATE. 
-```{r}
+Importer des couches géographiques avec `st_read()`. 
+
+```{r import_sf}
 del <- st_read("data/tun/geom/tun_admin.gpkg", layer = "delegation", quiet = TRUE)
 gouv <- st_read("data/tun/geom/tun_admin.gpkg", layer = "gouvernorat", quiet = TRUE)
 reg <- st_read("data/tun/geom/tun_admin.gpkg", layer = "region", quiet = TRUE)
@@ -421,33 +429,33 @@ reg <- st_read("data/tun/geom/tun_admin.gpkg", layer = "region", quiet = TRUE)
 
 Il s'agit bien d'objets `sf`. 
 
-```{r}
+```{r class_sf}
 class(del)
 ```
 
 La fonction `st_read()` peut aussi être employée pour des formats de fichiers .geojson, .shapefiles, etc. 
 
-```{r}
+```{r import_geojson}
 reg <- st_read("data/tun/geom/map_reg.geojson", quiet = TRUE) 
 ```
 
 Les objets `sf` sont des `data.frame` dont l’une des colonnes contient des géométries. Cette colonne est de la classe `sfc` (simple feature column) et chaque individu de la colonne est un `sfg` (simple feature geometry).
 
-Ce format est très pratique dans la mesure où les données et les géométries sont intrinsèquement liées dans un même objet. Des informations additionnelles, propres aux couches d'informations géographiques sont aussi restituées (type de géométrie, emprise spatiale, système de coordonnées de référence). 
-
-```{r}
+```{r head_sf}
 head(del)
 ```
 
+## Affichage
+
 Aperçu des variables avec `plot()` :
 
-```{r}
+```{r plot_sf}
 plot(del)
 ```
 
 Afficher juste les géométries:
 
-```{r}
+```{r plot_geom}
 #| fig-height: 4
 
 # 3 cartes par ligne
@@ -472,14 +480,15 @@ plot(reg$geom,
      main = "Régions")
 ```
 
+## Manipulations de base
 
-## Jointures attributaires
+### Jointures attributaires
 
 Nous pouvons joindre un `data.frame` à un objet `sf` en utilisant la fonction `merge()` et en s’appuyant sur des identifiants communs aux deux objets.
 
 Attention à l’ordre des arguments, l’objet retourné sera du même type que `x`. Il n’est pas possible de faire une jointure attributaire en utilisant deux objets `sf`.
 
-```{r}
+```{r merge}
 del <-  merge(
   x = del[,"del_code"],  # L'objet sf (seulement le champ del_code)
   y = del_df,          # le data.frame
@@ -492,12 +501,11 @@ head(del)
 plot(del[,"idr_2011"])
 ```
 
-
-## Sélectionner des lignes, des colonnes
+### Sélectionner des lignes, des colonnes
 
 Les objets `sf` sont des `data.frame`, on peut donc sélectionner leur lignes et leur colonnes de la même manière.
 
-```{r}
+```{r sf_select}
 # Sélection de lignes
 sou <- del[del$gou_nom == "Sousse",]
 
@@ -510,12 +518,11 @@ sou <- sou[!is.na(sou$idr_2011),]
 plot(sou[,"idr_2011"])
 ```
 
+## Export
 
-## Export d'une couche géographique
-
-```{r}
+```{r sf_export}
 #| eval: false
-st_write("data/sousse_deleg.geojson")
+st_write("data/tun/geom/sousse_deleg.geojson")
 ```
 
 <br>
@@ -528,29 +535,27 @@ Le package `terra` [@R-terra] permet d’importer et d’exporter des fichiers r
 
 La fonction `rast()` permet de créer et/ou d’importer des données raster. Nous importons ici un jeu de données au format .tif créé et distribué par [WorldPop](https://hub.worldpop.org/geodata/summary?id=29291) qui porte sur une estimation de la population tunisienne dans une résolution de 100 mètres. 
 
-```{r}
+```{r import_terra}
 library(terra)
-pop <- rast("data/tun/raster/tun_ppp_2020_UNadj.tif")
+pop <- rast("data/tun/geom/pop.tif")
 ```
 
 Ce sont des objets de type `SpatRaster`. 
 
-```{r}
+```{r class_terra}
 pop
 ```
 
 La fonction `summary()` est toujours utile pour un résumé statistique des cellules. Vu le nombre important de cellules, ce résumé est effectué sur un échantillon. 
 
-```{r}
+```{r summary_terra}
 summary(pop)
 ```
-
 
 ## Affichage
 
 Par défaut et comme montré précédemment, la fonction `plot()` renvoie une légende continue sur les représentations cartographiques. On peut choisir de discrétiser cette information pour représenter des classes de valeur associée à une palette de couleurs personnalisée. 
-
-```{r}
+```{r plot_terra}
 par(mfrow = c(1,2))
 
 # Graphique en échelle continue
@@ -563,11 +568,11 @@ plot(pop, breaks = cuts, col = cols(8))
 ```
 
 
-## Modification de la zone d'étude
+## Manipulation de base
 
 Le découpage d’un raster en fonction de l’étendue d’un autre objet, SpatVector ou SpatRaster, est réalisable avec la fonction `crop()`. Les deux couches de données doivent être dans la même projection.
 
-```{r}
+```{r crop_terra}
 # Transformer en WGS 84
 sou <- st_transform(sou, 4326)
 
@@ -583,9 +588,9 @@ plot(sou$geometry, col = NA, add = TRUE)
 
 La fonction `writeRaster()` permet d’enregistrer un objet `SpatRaster`.
 
-```{r}
+```{r export_terra}
 #| eval: false
-writeRaster(x = pop_sou, filename = "data/tun/raster/pop_sou.tif")
+writeRaster(x = pop_sou, filename = "data/tun/geom/pop_sou.tif")
 ```
 
 <br>
@@ -685,7 +690,7 @@ Ce package facilite l'accès à des données géographique de référence sur le
 
 Extraction des couches géographiques d'altitude et de température en Tunisie. 
 
-```{r}
+```{r import_geodata}
 #| eval: false
 
 library(geodata)
@@ -696,21 +701,21 @@ temp <- worldclim_country(country = "Tunisia",
                           path = tempdir())
 ```
 
-```{r}
+```{r import_geodata_hide}
 #| echo: false
 
-elev <- rast("data/tun/raster/elevation.tif")
-temp <- rast("data/tun/raster/temperatures_mai_av.tif")
+elev <- rast("data/tun/geom/elevation.tif")
+temp <- rast("data/tun/geom/temp.tif")
 ```
 
 Ce sont des objets de type `SpatRaster`.
 
-```{r}
+```{r class_geodata}
 class(temp)
 class(elev)
 ```
 
-```{r}
+```{r plot_geodata}
 # Les afficher
 par(mfrow = c(1,2))
 
@@ -737,14 +742,13 @@ Nous cherchons ici à créer une carte des émissions de CO² en Afrique en util
 
 Plusieurs fonds de carte des pays du Monde à différents niveaux de généralisation cartographique sont disponibles avec la package `rnaturalearth`. Nous sélectionnons uniquement les pays africains. 
 
-```{r}
+```{r import_naturalearth}
 library(rnaturalearth)
 
 # Import des pays
 country <- ne_countries(type = "countries", # pays
                         scale = "small",  # niveau de généralisation
                         returnclass = "sf") # objet retourné
-
 
 # Conversion en projection Mercator
 country <- st_transform(country, crs = "EPSG:3857")
@@ -755,7 +759,7 @@ afr <- country[country$continent == "Africa",]
 
 Le package `wbstats `permet d’interroger l’API de la base de données de la Banque Mondiale.  On peut faire une recherche pour trouver le nom des tables qui répondent à une requête par mots-clés avec la fonction `wb_search()`.
 
-```{r}
+```{r search_wbstats}
 library(wbstats)
 
 wb_search("CO2 emissions")
@@ -767,7 +771,7 @@ La fonction `wb_data()` extrait les tables identifiées pour pour construire l'i
 Chaque package reposant sur une API a son fonctionnement propre. Il est donc conseillé de consulter attentivement la documentation associée à ces packages (souvent précise) pour apprendre à les utiliser. 
 :::
 
-```{r}
+```{r import_wbstats}
 # Sélection des indicateurs
 my_indicators = c("pop" = "SP.POP.TOTL",
                   "co2" = "EN.ATM.CO2E.KT")
@@ -782,7 +786,7 @@ unique(wb$date)
 
 Nous gardons la dernière année pour laquelle les émissions de CO² sont disponibles 2020. La fonction `reshape()` est utilisée pour transformer le `data.frame` dans un format attendu (long vers large).
 
-```{r}
+```{r select_wbstats}
 # Sélectionner la dernière année disponible et les colonnes utiles
 wb <- wb[wb$date %in% 2020,]
 wb <- wb[,c("iso3c", "indicator_id", "value")]
@@ -792,25 +796,33 @@ wb <- data.frame(wb)
 wb <- reshape(wb, idvar = "iso3c", timevar = "indicator_id", direction = "wide")
 
 # Renommage des colonnes et création de l'indicateurs émissions par hab
-names(wb)[2:3] <- c("co2_2020", "pop_2020")
+names(wb)[2:3] <- c("pop_2020", "co2_2020")
 wb$co2_hab_2020 <- wb$co2_2020 * 1000 / wb$pop_2020
 ```
 
 La jointure attributaire avec le fond de carte précédemment importé avec `rnaturalearth` permet ainsi de constater que tout est en place pour procéder à une représentation cartographique du phénomène. 
 
-```{r}
+```{r plot_wbstats} 
 # Jointure attributaire
 afr <- merge(afr[,c("adm0_a3", "name_fr")], wb, 
              by.x = "adm0_a3", by.y = "iso3c", all.x = TRUE) 
 
+# Discretisation
+discr <- quantile(afr[,"co2_hab_2020", drop = TRUE], probs = seq(0,1, 0.25), na.rm = TRUE)
+
+# Couleurs
+cols <- colorRampPalette(c("yellow", "darkgoldenrod1", "brown1"))
+
 # Carte
-plot(afr[,"co2_hab_2020"])
+plot(afr[,"co2_hab_2020"],
+     breaks = "quantile",
+     main = "Émission de CO² par habitant, 2020")
 ```
 
 
 # OpenStreetMap
 
-OpenStreetMap (OSM) est un projet de cartographie participative qui a pour but de constituer une base de données géographiques libre à l’échelle mondiale. OSM vous permet de voir, modifier et utiliser des données géographiques dans le monde entier.
+OpenStreetMap (OSM) est un projet de cartographie participative qui a pour but de constituer une base de données géographique libre à l’échelle mondiale. OSM vous permet de voir, modifier et utiliser des données géographiques dans le monde entier.
 
 Plusieurs packages permettre d'extraire, interroger et visualiser des données issues d'OSM :
 
@@ -822,25 +834,25 @@ Plusieurs packages permettre d'extraire, interroger et visualiser des données i
 ::: {.callout-tip}
 ## Objectif
 
-Dans un premier temps nous cherchons à **extraire d'OSM** les géométries suivantes en Tunisie :
+Nous cherchons à **extraire d'OSM** pour la Tunisie les géométries suivantes :
 
 - **Découpages administratifs** : Délégations et secteurs. 
 - **Équipements** : objets décrits avec une clé OSM *amenity* (équipements utiles et importants). 
 
-A partir de ces données extraites, nous proposons ensuite de **calculer les temps de parcours routiers** des **centres de secteur** vers **l'hôpital ou la clinique la plus accessible**. 
+Ces données nous permettront ensuite de **calculer les temps de parcours routiers** des **centres de secteur** vers **l'hôpital ou la clinique la plus accessible**. 
 ::: 
 
-## Extraction et préparation des données
+## Extraction et mise en forme
 
-Le package `osmextract` [@R-osmextract] permet d’extraire des données depuis une base de données OSM directement et travailler en local sur des volumes de données très importants et ainsi d’éviter de surcharger un serveur Overpass turbo (utilisé par le package `osmdata`).
+Le package `osmextract` [@R-osmextract] permet d’extraire de télécharger des données OSM pour une zone géographique donnée. Cela permet aussi d’éviter de surcharger un serveur Overpass turbo (utilisé par le package `osmdata`) et ainsi de travailler sur des volumes de données plus importants. 
 
 ### Découpages administratifs
 
 La fonction `oe_get()` permet de télécharger un extrait de la base de données OSM pour une zone particulière et un type d’objet géographique. L’argument `place` correspond au nom du fichier *.pbf accessible sur le site [Geofabrik](http://download.geofabrik.de/). L’argument `extra_tag` permet de sélectionner les objets de la base OSM correspondant à une clé particulière (se référer à [la documentation d’OSM](https://wiki.openstreetmap.org/wiki/FR:%C3%89l%C3%A9ments_cartographiques) pour choisir les clés).
 
-On commence par extraire tous les polygones et les points OSM inclus en Tunisie. L'import d'`extra_tags` permet d'obtenir des informations supplémentaires qui serviront à filtrer la base de données. 
+On commence par extraire **tous les polygones et les points OSM inclus en Tunisie**. L'import d'`extra_tags` permet d'obtenir des informations supplémentaires qui serviront à filtrer la base de données. 
 
-```{r}
+```{r import_osmextract}
 #| eval: false
 library(osmextract)
 osm_poly <- oe_get(place = "Tunisia",
@@ -855,7 +867,7 @@ osm_pt <- oe_get(place = "Tunisia",
 
 On peut ensuite filtrer l'extraction en fonction des objets / champs d'intérêt. 
 
-```{r}
+```{r prepare_osmextract}
 #| eval: false
 # Délégations et secteurs
 admin <- osm_poly[!is.na(osm_poly$admin_level),] # Retirer pas d'attribut de niveau hiérarchique
@@ -871,11 +883,11 @@ sect <- sect[,c("osm_id", "ref_tn_codegeo", "name_ar",
 
 Ce bloc de code, dont on ne détaillera pas le contenu ici, permet d'harmoniser le nom des champs entre les couches géographiques et de disposer des délégations et gouvernorats d'appartenance des couches géographiques des secteurs et délégations. 
 
-```{r}
+```{r consolidate_osmextract}
 #| eval: false
 
 # Délégation d'appartenance du secteur
-sect_pt <- st_centroid(sect) # Centroid du secteur
+sect_pt <- st_centroid(sect) # Centroide du secteur
 sect_pt <- st_intersection(sect_pt, deleg) # Intersection avec couche délégation
 sect_pt <- st_set_geometry(sect_pt, NULL) # Retirer géométries
 sect <- merge(sect, # Enrichir les secteurs du code d'appartenance de la délégation
@@ -889,7 +901,6 @@ names(sect)[2] <- "id_tn"
 names(sect)[6] <- "id_hasc_deleg"
 sect$id_hasc_gouv <- substr(sect$id_hasc_deleg, 1, 5) # Gouvernorat d'appartenance
 names(sect)[2,6] <- (c("tn_codegeo", "int_codegeo"))
-names(deleg)[2:3] <- c("id_tn", "id_hasc_deleg")
 deleg$id_hasc_gouv <- substr(deleg$id_hasc_deleg, 1, 5)
 ```
 
@@ -899,7 +910,7 @@ Les objets décrits par la clé *amenity* sont de nature hétérogènes (points,
 
 Ces couches géographiques sont finalement exportées dans un geopackage `tun_osm.gpkg`.
 
-```{r}
+```{r export_preparation_osmextract}
 #| eval: false
 
 # Consolidation des géométries
@@ -917,9 +928,11 @@ st_write(deleg, "data/tun/geom/tun_osm.gpkg", layer = "deleg")
 st_write(sect, "data/tun/geom/tun_osm.gpkg", layer = "sect")
 ```
 
-:::{.callout-note title="Pour aller plus loin"}
+:::{.callout-note title="Pour aller plus loin" collapse="true"}
 
 Ce [document](https://rcarto.github.io/caRtosm/index.html) [@giraud2017] montre comment créer un fond de carte avec des données OSM, extraire des objets d'intérêt (bars et restaurants) avec le package `osmdata`. Il propose également plusieurs pistes cartographiques pour manipuler et visualiser ces données. Notons simplement que la cartographie utilise les fonctions du package `cartography`, plus maintenu, et qu'il est conseillé d'utiliser dorénavant le package `mapsf`. 
+
+![Cartographic Explorations of the OpenStreetMap Database with R (Giraud, 2017)](img/paname.png)
 
 :::
 
@@ -927,7 +940,7 @@ Ce [document](https://rcarto.github.io/caRtosm/index.html) [@giraud2017] montre 
 
 Dénombrement des 15 objets OSM les plus fréquents décrits par la clé *amenity* en Tunisie.
 
-```{r}
+```{r import_conso_osmextract}
 # Import des aménités préparées en amont
 osm_pt <- st_read("data/tun/geom/tun_osm.gpkg", layer = "poi", quiet = TRUE)
 
@@ -942,7 +955,7 @@ osm_pt <- osm_pt[osm_pt$amenity %in% c("clinic", "hospital"), ]
 
 Nombre de délégations, secteurs et cliniques/hôpitaux inclus dans OSM. 
 
-```{r}
+```{r import_admin_osmextract}
 # Import des unités territoriales préparées en amont
 deleg <- st_read("data/tun/geom/tun_osm.gpkg", layer = "deleg", quiet = TRUE)
 sect <- st_read("data/tun/geom/tun_osm.gpkg", layer = "sect", quiet = TRUE)
@@ -955,7 +968,7 @@ nrow(osm_pt)
 
 Le résultat sous forme d'une carte interactive avec le package `leaflet`, qui sera présenté ultérieurement dans la formation.  
 
-```{r}
+```{r leaflet_osmextract}
 #| code-fold: true
 
 # Choisir la palette
@@ -1003,21 +1016,22 @@ leaflet(osm_pt) |> # Emprise = hôpitaux
 
 Le package `osrm` (@R-osrm) sert d’interface entre R et le service de calcul d’itinéraire [OSRM](http://project-osrm.org/) (Luxen et Vetter, 2011). Ce package permet de calculer des matrices de temps et de distances, des itinéraires routiers, des isochrones. Le package utilise par défaut le serveur de démo d’OSRM. En cas d’utilisation intensive il est fortement recommandé d’[utiliser sa propre instance d’OSRM avec Docker](https://rcarto.github.io/posts/build_osrm_server/).
 
-La fonction `osrmTable()` permet de calculer des matrices de distances ou de temps par la route. Nous effectuons cette opération entre le centroide de chaque secteur et les cliniques / hôpitaux extraits plus haut avec `osmextract`. 
+La fonction `osrmTable()` permet de calculer des matrices de distances ou de temps par la route. Nous effectuons cette opération à partir des données extraites plus haut :
 
-```{r}
-# Choisir un gouvernorat
-sel <- sect[sect$id_hasc_gouv == "TN.SS",]
-sel <- sel[!is.na(sel$osm_id),]
-sel <- sel[!duplicated(sel$osm_id),]
+- **Origines** : centroides des secteurs de la délégation de Sousse.
+- **Destinations** : hôpitaux et cliniques dans un voisinage géographique de 20 kilomètres autour de la délégation de Sousse. 
 
-# Origines (centroides des secteurs)
-ori <- st_centroid(sel)
+```{r prepare_osrm}
+# Origines
+sel <- sect[sect$id_hasc_gouv == "TN.SS",] # Secteurs de la délégation de Sousse
+sel <- sel[!is.na(sel$osm_id),] # Géométries vides
+sel <- sel[!duplicated(sel$osm_id),] # Géométries dupliquées
+ori <- st_centroid(sel) # Cenroide
 
 # Considérer les cliniques et hôpitaux dans un voisinage de 20 km autour de la délégation
 osm_pt <- st_transform(osm_pt, 2088) # Transformer en coordonnées planaires
 sel <- st_transform(sel, 2088)
-dest <- st_filter(osm_pt, st_buffer(sel, 20000), .predicate = st_intersects)
+dest <- st_filter(osm_pt, st_buffer(sel, 20000), .predicate = st_intersects) # Dans un rayon de 20 km
 dest <- st_transform(dest, 4326)
 
 # Calcul de temps de trajets avec OSRM (pas grosse requête)
@@ -1033,9 +1047,9 @@ row.names(df) <- as.character(ori$osm_id)
 head(df)
 ```
 
-On peut ensuite assez aisément avec la fonction `apply()` extraire le temps de trajet minimal par secteur. 
+On peut ensuite extraire le temps de trajet minimal par secteur avec la fonction `apply()` 
 
-```{r}
+```{r time_min_osrm}
 time <- apply(df, 1, min) 
 time <- data.frame(time)
 time$osm_id <- row.names(time)
@@ -1044,7 +1058,7 @@ head(time)
 
 Nous finissons par une jointure attributaire avec la couche géographique des secteurs, ce qui permet de réaliser une représentation cartographique des résultats avec le package `mapsf` qui sera présenté ultérieurement dans la formation. 
 
-```{r}
+```{r map_osrm}
 #| code-fold: true
 sel <- merge(sel, time, by = "osm_id", all.x = TRUE)
 deleg <- st_transform(deleg, 2088)
@@ -1076,14 +1090,55 @@ mf_credits(paste0("Source: © OpenStreetMap et Contributeurs, 2024\n",
 
 # A vous de jouer !
 
-L'ensemble des données présentées dans ce tutoriel ont été rassemblées dans le dossier `data`. Vous êtes invités sur un espace de votre choix (Monde / Tunisie) à :
+Vous êtes invités à **réaliser un graphique et une carte simple de l'évolution de l'équipement des ménages en ordinateur entre 2004 et 2014** dans les délégations tunisiennes. Les étapes à suivre sont les suivantes : 
 
-- Importer un jeu de données tabulaire.
-- Importer une couche géographique vectorielle.
-- Faire une jointure attributaire.
-- Choisir une variable et réaliser un résumé statistique (`summary()`) et un graphique présentant la distribution des valeurs de la variable.
-- Faire une carte avec la fonction `plot()`
+**Initialisation de l'espace de travail**
 
+- Créez un dossier sur votre espace de travail, ouvrir RStudio. 
+- Créez un projet et un document Quarto (ou un script R) dans ce dossier.
+- Téléchargez les données (**[https://bit.ly/3Wpdut4](https://bit.ly/3Wpdut4)**) et décompressez l'archive dans l'espace de travail précédemment créé. 
+
+**Codez !**
+
+- Importez les données avec `read.csv()` (chemin : `data/tun/data/don_del.csv`).
+- Créez l'indicateur : `ordin_2014/ordin_2004 * 100.` 
+- Faites un résumé statistique de la variable avec `summary()` 
+- Faites un histogramme de la distribution statisitique avec `hist()`.
+- Importez la couche géographique des délégations avec `st_read()` de la librairie `sf` (chemin : `data/tun/geom/tun_admin.gpkg`, layer : delegation)
+- Réalisez une jointure attributaire avec `merge()`. Les champs communs de jointure entre les deux tables sont `del_code`.
+- Réalisez une carte de la variable d'intérêt avec la fonction `plot()`
+
+::: {.callout-tip collapse="true"}
+## Une solution possible
+
+```{r}
+#  Import des données
+del <- read.csv("data/tun/data/don_del.csv", sep = ";")
+head(del)
+
+# Évolution (indice 100) de l'équipement de la population en ordinateur
+del$ordin_evol <- del$ordin_2014 / del$ordin_2004 * 100
+head(del[,c("del_code", "del_nom_fr", "ordin_2004", "ordin_2014", "ordin_evol")])
+
+# Résumé statistique
+summary(del$ordin_evol)
+
+# Histogramme
+hist(del$ordin_evol)
+
+# Import géométries
+library(sf)
+del_geom <- st_read("data/tun/geom/tun_admin.gpkg", layer = "delegation")
+
+# Jointure attributaire
+del_geom <- merge(del_geom, del, by = "del_code")
+
+# Carte simple
+plot(del_geom[,"ordin_evol"], breaks = "quantile",
+     main = "Une géographie assez marquée...")
+```
+
+::: 
 
 ### Session Info
 
