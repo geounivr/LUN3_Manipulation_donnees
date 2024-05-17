@@ -16,7 +16,7 @@ Introduction de l'école thématique
 
 Comment importer, explorer, manipuler, visualiser (simplement) et exporter des données géographiques avec R
 
-- <a href = "hhttps://geounivr.github.io/LUN3_Manipulation_donnees/ target = "_BLANK">LUN_3_manipulation de données
+- <a href = "hhttps://geounivr.github.io/LUN3_Manipulation_donnees/" target = "_BLANK">LUN_3_manipulation de données
 
 
 ### [MAR2] Cartographie avec R
