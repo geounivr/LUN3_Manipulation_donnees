@@ -21,7 +21,7 @@ Comment importer, explorer, manipuler, visualiser (simplement) et exporter des d
 
 ### [MAR1] Manipuler les vecteurs avec R et le package sf 
 
-Présentation d'introduction à la cartographie thématique. Son histoire. Ses regles. Etc.
+Comment réaliser des traitements SIG (géotraitements, selections attributaires et spatiales, jointures etc...) avec R
 
 - <a href = "https://geounivr.github.io/MAR1_vecteur/" target = "_BLANK">MAR_1_vecteurs</a>
 
