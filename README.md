@@ -19,6 +19,12 @@ Comment importer, explorer, manipuler, visualiser (simplement) et exporter des d
 - <a href = "https://geounivr.github.io/LUN3_Manipulation_donnees/" target = "_BLANK">LUN_3_manipulation de données</a>
 
 
+### [MAR1] Manipuler les vecteurs avec R et le package sf 
+
+Présentation d'introduction à la cartographie thématique. Son histoire. Ses regles. Etc.
+
+- <a href = "https://geounivr.github.io/MAR1_vecteur/" target = "_BLANK">MAR_1_vecteurs</a>
+
 ### [MAR2] Cartographie avec R
 
 Présentation d'introduction à la cartographie thématique. Son histoire. Ses regles. Etc.
